@@ -1,0 +1,10 @@
+# depslib dependency file v1.0
+1554547268 source:c:\codeblocks17\c++\games\É¨À×\main.cpp
+	"saolei.h"
+
+1567909893 c:\codeblocks17\c++\games\É¨À×\saolei.h
+	<iostream>
+	<time.h>
+	<windows.h>
+	<conio.h>
+

@@ -1,0 +1,265 @@
+#include<iostream>
+#include<time.h>
+#include<windows.h>
+#include<string.h>
+#include<conio.h>
+using namespace std;
+HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+class SaoLei
+{
+public:
+    SaoLei() {
+         mapsize = 15; leishu = 25;
+         x = 0, y = 0, n = 0, flag = 0;
+        memset(mapfalse, 0, sizeof(mapfalse));
+        memset(maptrue, 0, sizeof(maptrue));
+    }
+    ~SaoLei() {}
+    void initlei(int nx,int ny)//初始雷
+    {
+        int i = 0;
+        srand(time(0));
+        while (i < leishu)
+        {
+            int a, b;
+            a = rand() % mapsize;
+            b = rand() % mapsize;
+            if ((a != nx && b != ny) && maptrue[a][b] != -1) {
+                i++;
+                maptrue[a][b] = -1;
+            }
+        }
+    }
+
+    void initdata()//初始化雷周围数字
+    {
+        int i, j;
+        for (i = 0; i < mapsize; i++)
+            for (j = 0; j < mapsize; j++)
+            {
+                if (maptrue[i][j] == -1)
+                {
+                    for (int a = -1; a < 2; a++)
+                        for (int b = -1; b < 2; b++)
+                        {
+                            if (i + a >= 0 && i + a < mapsize && j + b>0 && j + b < mapsize && maptrue[i + a][j + b] != -1)
+                                maptrue[i + a][j + b]++;
+                        }
+                    maptrue[i][j] = -1;
+                }
+            }
+    }
+
+    void dfs_show(int nx, int ny)//dfs遍历，确定点击块相邻的块是否要翻开
+    {
+        if (nx < 0 || nx >= mapsize || ny < 0 || ny >= mapsize || maptrue[nx][ny] == -1)
+            return;
+        if (maptrue[nx][ny] != 0) {
+            mapfalse[nx][ny] = 1;
+            return;
+        }
+        for (int i = -1; i < 2; i++)
+            for (int j = -1; j < 2; j++)
+            {
+                if (i == 0 && j == 0) { mapfalse[nx][ny] = 1; continue; }
+                int xx = i + nx, yy = ny + j;
+                if (xx >= 0 && xx < mapsize && yy >= 0 && yy < mapsize && mapfalse[xx][yy] == 0 && maptrue[xx][yy] != -1)
+                {
+                    mapfalse[xx][yy] = 1;
+                    n++;
+                    dfs_show(xx, yy);
+                }
+            }
+    }
+
+    int getSize() { return mapsize; }
+    int getX() { return x; }
+    int getY() { return y; }
+    int getN() { return n; }
+    int getF() { return flag; }
+    int getL() { return leishu; }
+    void setX(int a) { x += a; }
+    void setY(int a) { y += a; }
+    void setF(int a) { flag = a; }  
+    void setN(int a) { n += a; }
+    int maptrue[30][30];//记录雷 -1为雷
+    int mapfalse[30][30];//记录是否点击
+private:
+    int  mapsize;//地图大小
+    int leishu;//雷数量
+    int x, y, n, flag;//n是点开的块数,x，y是当前坐标,flag表示是否开始游戏
+};
+
+void gotoxy(int n_y, int n_x) // 获取标准输出设备句柄 SetConsoleCursorPosition(hOut, pos);//两个参数分别是指定哪个窗体，具体位置
+{
+    COORD pos = { (SHORT)n_x,(SHORT)n_y };
+    SetConsoleCursorPosition(hOut, pos);
+}
+
+void HideCursor()//隐藏光标
+{
+    CONSOLE_CURSOR_INFO cursor_info = { 1,0 };
+    SetConsoleCursorInfo(hOut, &cursor_info);//控制控制台光标大小及可视性
+}
+
+class Message
+{
+public:
+    Message() {}
+    ~Message(){}
+    SaoLei sl;
+
+    int click(int nx, int ny)//点击事件
+    {
+        if (sl.maptrue[nx][ny] == -1 && sl.mapfalse[nx][ny] == 0)//点击雷
+        {
+            MessageBoxA(NULL, "游戏失败", "", 0);
+        }
+        else if (sl.maptrue[nx][ny] == 0)//点到白块
+        {
+            sl.mapfalse[nx][ny] = 1;
+            sl.setN(1);
+            sl.dfs_show(nx, ny);
+        }
+        else//点到数字
+        {
+            sl.mapfalse[nx][ny] = 1;
+            sl.setN(1);
+        }
+        if (sl.getN() >= sl.getSize() * sl.getSize() - sl.getL())
+        {
+            reflesh();
+            MessageBoxA(NULL, "恭喜你！游戏胜利！", "", 0);
+            return 0;
+        }
+        return 1;
+    }
+    void reflesh()//刷新地图
+    {
+        gotoxy(0, 0);
+        for (int i = 0; i < sl.getSize(); i++)
+            for (int j = 0; j < sl.getSize(); j++)
+            {
+                if (i == sl.getX() && j == sl.getY() / 2) {
+                    SetConsoleTextAttribute(hOut, FOREGROUND_INTENSITY | FOREGROUND_RED);//红色
+                    cout << "■";
+                }
+                else if (sl.mapfalse[i][j] == 0) {
+                    SetConsoleTextAttribute(hOut, FOREGROUND_INTENSITY | FOREGROUND_GREEN);//绿色
+                    cout << "■";
+                }
+                else if (sl.maptrue[i][j] == 0) {
+                    SetConsoleTextAttribute(hOut, FOREGROUND_INTENSITY | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_RED);//白色
+                    cout << "■";
+                }
+                else {
+                    cout << sl.maptrue[i][j] << ' ';
+                }
+                if (j == sl.getSize() - 1) cout << endl;
+            }
+    }
+
+    void show_for_user()//帮助信息
+    {
+        gotoxy(sl.getSize() + 4, 2);
+        cout << "W";
+        gotoxy(sl.getSize() + 5, 0);
+        cout << "A S D";
+        gotoxy(sl.getSize() + 6, 0);
+        cout << "空格确定";
+    }
+
+    void initmap()//初始化地图
+    {
+        gotoxy(0, 0);
+        for (int i = 0; i < sl.getSize(); i++)
+            for (int j = 0; j < sl.getSize(); j++)
+            {
+                if (i == sl.getX() && j == sl.getY()) {
+                    SetConsoleTextAttribute(hOut, FOREGROUND_INTENSITY | FOREGROUND_RED);//红色
+                    cout << "■";
+                }
+                else {
+                    SetConsoleTextAttribute(hOut, FOREGROUND_INTENSITY | FOREGROUND_GREEN);//绿色
+                    cout << "■";
+                }
+
+                if (j == sl.getSize() - 1) cout << endl;
+            }
+        gotoxy(0, 0);
+    }
+
+    int input()//监控输入
+    {
+        int ch;
+        if (_kbhit())
+        {
+            ch = _getch();
+            if (ch == 65 || ch == 97)//左移
+            {
+                if (sl.getY() - 2 >= 0)
+                    sl.setY(-2);
+            }
+            else if (ch == 68 || ch == 100)//右移
+            {
+                if (sl.getY() + 2 < sl.getSize() * 2)
+                    sl.setY(2);
+            }
+            else if (ch == 87 || ch == 119)//上移
+            {
+                if (sl.getX() - 1 >= 0)
+                    sl.setX(-1);
+            }
+            else if (ch == 83 || ch == 115)//下移
+            {
+                if (sl.getX() + 1 < sl.getSize())
+                    sl.setX(1);
+            }
+            else if (ch == 32)//确认
+            {
+                if (sl.getF() == 0) {
+                    sl.initlei(sl.getX(), sl.getY());
+                    sl.initdata();
+                    sl.setF(1);
+                }
+                click(sl.getX(), sl.getY() / 2);
+                reflesh();
+            }
+        }
+        return 0;
+    }
+
+    
+};
+
+
+
+int main()
+{
+    Message message;
+    message.show_for_user();
+    message.initmap();
+    while (true)
+    {
+        HideCursor();
+        message.input();
+        message.reflesh();
+    }
+
+    return 0;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
